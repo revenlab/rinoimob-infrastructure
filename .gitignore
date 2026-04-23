@@ -1,8 +1,18 @@
+# Docker
+.dockerignore
+Dockerfile
+docker-compose.override.yml
+
+# Kubernetes
+k8s/overlays/*/kustomization.yaml
+*.yaml.bak
+
 # Terraform
+*.tfvars
 .terraform/
-.terraform.lock.hcl
 *.tfstate
 *.tfstate.*
+.terraform.lock.hcl
 crash.log
 
 # IDE
@@ -15,6 +25,7 @@ crash.log
 # Environment
 .env
 .env.local
+.env.*.local
 
 # OS
 .DS_Store

@@ -1,0 +1,26 @@
+name: Validate Docker Compose
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Validate docker-compose.yml
+      run: docker-compose config > /dev/null
+
+    - name: Validate .env.example exists
+      run: test -f .env.example
+
+    - name: Validate scripts exist
+      run: test -f scripts/init-db.sql
