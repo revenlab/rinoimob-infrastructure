@@ -14,7 +14,7 @@ The docker-compose stack includes:
 - **PostgreSQL 15**: Main application database
   - Port: 5432
   - User: postgres
-  - Password: postgres_dev (development)
+  - Password: pass (development)
 
 - **Redis 7**: Caching and session store
   - Port: 6379
@@ -62,10 +62,10 @@ docker-compose config
 
 ```bash
 # Connect to PostgreSQL
-docker exec -it rinoimob-postgres psql -U postgres -d rinoimob
+docker exec -it rinoimob-postgres psql -U user -d rinoimob
 
 # Run SQL script
-docker exec -i rinoimob-postgres psql -U postgres -d rinoimob < scripts/init-db.sql
+docker exec -i rinoimob-postgres psql -U user -d rinoimob < scripts/init-db.sql
 ```
 
 ## RabbitMQ Management
