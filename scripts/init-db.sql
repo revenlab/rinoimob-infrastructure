@@ -3,7 +3,7 @@
 
 CREATE SCHEMA IF NOT EXISTS public;
 
--- Grant privileges to postgres user
+-- Grant privileges to application user
 GRANT ALL PRIVILEGES ON SCHEMA public TO user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO user;
