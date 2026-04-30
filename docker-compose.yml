@@ -85,12 +85,50 @@ services:
       seaweedfs-master:
         condition: service_healthy
 
+  evolution-api:
+    image: atendai/evolution-api:v2.2.3
+    container_name: rinoimob-evolution-api
+    restart: unless-stopped
+    ports:
+      - "${EVOLUTION_API_PORT:-8081}:8080"
+    environment:
+      SERVER_PORT: 8080
+      SERVER_URL: ${EVOLUTION_API_EXTERNAL_URL:-http://localhost:8081}
+      AUTHENTICATION_TYPE: apikey
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:-changeme-evolution-apikey}
+      AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "true"
+      DATABASE_ENABLED: "false"
+      RABBITMQ_ENABLED: "true"
+      RABBITMQ_URI: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rinoimob-rabbitmq:5672
+      RABBITMQ_EXCHANGE_NAME: evolution
+      RABBITMQ_GLOBAL_ENABLED: "true"
+      RABBITMQ_EVENTS_APPLICATION_STARTUP: "false"
+      RABBITMQ_EVENTS_MESSAGES_UPSERT: "true"
+      RABBITMQ_EVENTS_MESSAGES_UPDATE: "true"
+      RABBITMQ_EVENTS_CONNECTION_UPDATE: "true"
+      RABBITMQ_EVENTS_QRCODE_UPDATED: "true"
+      DEL_INSTANCE: "false"
+      LANGUAGE: pt-BR
+    volumes:
+      - evolution_data:/evolution/instances
+    networks:
+      - rinoimob-network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
 volumes:
   postgres_data:
   redis_data:
   rabbitmq_data:
   seaweedfs_master_data:
   seaweedfs_volume_data:
+  evolution_data:
 
 networks:
   rinoimob-network:
