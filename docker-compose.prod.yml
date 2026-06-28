@@ -1,0 +1,243 @@
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: rinoimob-nginx
+    restart: unless-stopped
+    env_file:
+      - ${RINOIMOB_ENV_FILE:-.env.prod}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.prod.conf:/etc/nginx/templates/default.conf.template:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      app:
+        condition: service_started
+      backend:
+        condition: service_healthy
+      website:
+        condition: service_started
+      seaweedfs-volume:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/ >/dev/null || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rinoimob-prod
+
+  backend:
+    build:
+      context: ../rinoimob-backend
+      dockerfile: Dockerfile
+    container_name: rinoimob-backend
+    restart: unless-stopped
+    env_file:
+      - ${RINOIMOB_ENV_FILE:-.env.prod}
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      SEAWEEDFS_MASTER_URL: http://seaweedfs-master:9333
+      SEAWEEDFS_VOLUME_PUBLIC_URL: ${SEAWEEDFS_VOLUME_PUBLIC_URL}
+      EVOLUTION_API_URL: http://evolution-api:8080
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY}
+    expose:
+      - "39000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      seaweedfs-master:
+        condition: service_healthy
+      evolution-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:39000/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 20s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    networks:
+      - rinoimob-prod
+
+  app:
+    build:
+      context: ../rinoimob-app
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${APP_VITE_API_URL}
+        VITE_WS_URL: ${APP_VITE_WS_URL}
+    container_name: rinoimob-app
+    restart: unless-stopped
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/health | grep -q ok"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rinoimob-prod
+
+  website:
+    build:
+      context: ../rinoimob-website
+      dockerfile: Dockerfile
+    container_name: rinoimob-website
+    restart: unless-stopped
+    env_file:
+      - ${RINOIMOB_ENV_FILE:-.env.prod}
+    environment:
+      NUXT_PUBLIC_API_URL: ${NUXT_PUBLIC_API_URL}
+      NUXT_PUBLIC_APP_URL: ${NUXT_PUBLIC_APP_URL}
+      NUXT_API_INTERNAL_URL: ${NUXT_API_INTERNAL_URL}
+      HOST: 0.0.0.0
+      PORT: 3000
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ >/dev/null"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - rinoimob-prod
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: rinoimob-postgres-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME} -h localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rinoimob-prod
+
+  redis:
+    image: redis:7-alpine
+    container_name: rinoimob-redis-prod
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rinoimob-prod
+
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: rinoimob-rabbitmq-prod
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rinoimob-prod
+
+  seaweedfs-master:
+    image: chrislusf/seaweedfs:3.68
+    container_name: rinoimob-seaweedfs-master-prod
+    restart: unless-stopped
+    command: "master -ip=seaweedfs-master -ip.bind=0.0.0.0 -mdir=/data"
+    volumes:
+      - seaweedfs_master_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9333/cluster/status || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rinoimob-prod
+
+  seaweedfs-volume:
+    image: chrislusf/seaweedfs:3.68
+    container_name: rinoimob-seaweedfs-volume-prod
+    restart: unless-stopped
+    command: "volume -mserver=seaweedfs-master:9333 -ip.bind=0.0.0.0 -port=8080 -dir=/data -max=10"
+    volumes:
+      - seaweedfs_volume_data:/data
+    depends_on:
+      seaweedfs-master:
+        condition: service_healthy
+    networks:
+      - rinoimob-prod
+
+  evolution-api:
+    image: atendai/evolution-api:v2.2.3
+    container_name: rinoimob-evolution-api-prod
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: 8080
+      SERVER_URL: ${EVOLUTION_API_EXTERNAL_URL}
+      AUTHENTICATION_TYPE: apikey
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY}
+      AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "false"
+      DATABASE_ENABLED: "false"
+      RABBITMQ_ENABLED: "true"
+      RABBITMQ_URI: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      RABBITMQ_EXCHANGE_NAME: evolution
+      RABBITMQ_GLOBAL_ENABLED: "true"
+      RABBITMQ_EVENTS_APPLICATION_STARTUP: "false"
+      RABBITMQ_EVENTS_MESSAGES_UPSERT: "true"
+      RABBITMQ_EVENTS_MESSAGES_UPDATE: "true"
+      RABBITMQ_EVENTS_CONNECTION_UPDATE: "true"
+      RABBITMQ_EVENTS_QRCODE_UPDATED: "true"
+      DEL_INSTANCE: "false"
+      LANGUAGE: pt-BR
+    volumes:
+      - evolution_data:/evolution/instances
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rinoimob-prod
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  seaweedfs_master_data:
+  seaweedfs_volume_data:
+  evolution_data:
+
+networks:
+  rinoimob-prod:
+    driver: bridge

@@ -24,8 +24,13 @@ crash.log
 
 # Environment
 .env
+.env.prod
+.env.production
 .env.local
 .env.*.local
+
+# TLS certificates
+certs/
 
 # OS
 .DS_Store
