@@ -77,6 +77,11 @@ Cloudflare Origin Certificate mounted in `./certs`. Do not publish Postgres,
 Redis, RabbitMQ, SeaweedFS master/volume or Evolution API directly to the
 Internet.
 
+Custom domains use the HTTPS default server in `nginx.prod.conf`, which routes
+unknown hostnames to the public website. The backend public CORS policy allows
+HTTPS custom domains only for `/api/v1/public/**`; authenticated app/API routes
+remain restricted by `CORS_ALLOWED_ORIGINS`.
+
 ### First deploy
 
 ```bash
@@ -109,6 +114,8 @@ Point these records to the production host before starting the reverse proxy:
 
 In Cloudflare, keep these records proxied. Set SSL/TLS encryption mode to
 `Full (strict)`. The origin certificate must cover every configured hostname.
+Set `CLOUDFLARE_CUSTOM_HOSTNAME_TARGET` to the hostname customers should CNAME
+to, normally `WEBSITE_DOMAIN`.
 
 The Nginx origin restores the visitor IP from `CF-Connecting-IP` when requests
 come from Cloudflare IP ranges. Keep the Cloudflare IP list current and restrict
