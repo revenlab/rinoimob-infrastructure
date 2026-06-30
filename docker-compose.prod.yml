@@ -202,17 +202,26 @@ services:
     image: evoapicloud/evolution-api:latest
     container_name: rinoimob-evolution-api-prod
     restart: unless-stopped
+    env_file:
+      - ${RINOIMOB_ENV_FILE:-.env.prod}
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        if [ -z "$${DATABASE_CONNECTION_URI}" ]; then
+          export DATABASE_CONNECTION_URI="postgresql://$${DB_USER}:$${DB_PASSWORD}@postgres:5432/$${DB_NAME}?schema=public"
+        fi
+        export SERVER_URL="$${EVOLUTION_API_EXTERNAL_URL}"
+        export AUTHENTICATION_API_KEY="$${EVOLUTION_API_KEY}"
+        export RABBITMQ_URI="amqp://$${RABBITMQ_USER}:$${RABBITMQ_PASSWORD}@rabbitmq:5672"
+        . ./Docker/scripts/deploy_database.sh && npm run start:prod
     environment:
       SERVER_PORT: 8080
-      SERVER_URL: ${EVOLUTION_API_EXTERNAL_URL}
       AUTHENTICATION_TYPE: apikey
-      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY}
       AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "false"
       DATABASE_ENABLED: "true"
       DATABASE_PROVIDER: postgresql
-      DATABASE_CONNECTION_URI: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}?schema=public
       RABBITMQ_ENABLED: "true"
-      RABBITMQ_URI: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
       RABBITMQ_EXCHANGE_NAME: evolution
       RABBITMQ_GLOBAL_ENABLED: "true"
       RABBITMQ_EVENTS_APPLICATION_STARTUP: "false"
