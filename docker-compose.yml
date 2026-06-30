@@ -97,7 +97,9 @@ services:
       AUTHENTICATION_TYPE: apikey
       AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:-changeme-evolution-apikey}
       AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "true"
-      DATABASE_ENABLED: "false"
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://${DB_USER:-user}:${DB_PASSWORD:-pass}@postgres:5432/${DB_NAME:-rinoimob}?schema=public
       RABBITMQ_ENABLED: "true"
       RABBITMQ_URI: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rinoimob-rabbitmq:5672
       RABBITMQ_EXCHANGE_NAME: evolution
@@ -114,6 +116,8 @@ services:
     networks:
       - rinoimob-network
     depends_on:
+      postgres:
+        condition: service_healthy
       rabbitmq:
         condition: service_healthy
     healthcheck:
