@@ -123,6 +123,8 @@ Preencha os domínios:
 APP_DOMAIN=app.seudominio.com
 API_DOMAIN=api.seudominio.com
 WEBSITE_DOMAIN=www.seudominio.com
+TENANT_WILDCARD_DOMAIN=*.seudominio.com
+TENANT_BASE_DOMAIN=seudominio.com
 FILES_DOMAIN=files.seudominio.com
 ```
 
@@ -163,6 +165,10 @@ NUXT_API_INTERNAL_URL=http://backend:39000
 
 SEAWEEDFS_VOLUME_PUBLIC_URL=https://files.seudominio.com
 ```
+
+Para sites de clientes em subdomínios como `cliente.seudominio.com`, crie no
+Cloudflare um DNS wildcard proxied (`*.seudominio.com`) apontando para a VPS e
+gere o Cloudflare Origin Certificate cobrindo também `*.seudominio.com`.
 
 Configure integrações se forem usadas em produção:
 

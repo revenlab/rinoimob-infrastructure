@@ -110,12 +110,18 @@ Point these records to the production host before starting the reverse proxy:
 - `APP_DOMAIN` → internal app, for example `app.example.com`
 - `API_DOMAIN` → backend API, for example `api.example.com`
 - `WEBSITE_DOMAIN` → public website, for example `www.example.com`
+- `TENANT_WILDCARD_DOMAIN` → tenant public sites, for example `*.example.com`
+- `TENANT_BASE_DOMAIN` → base used to resolve tenant subdomains, for example `example.com`
 - `FILES_DOMAIN` → public property media, for example `files.example.com`
 
 In Cloudflare, keep these records proxied. Set SSL/TLS encryption mode to
 `Full (strict)`. The origin certificate must cover every configured hostname.
 Set `CLOUDFLARE_CUSTOM_HOSTNAME_TARGET` to the hostname customers should CNAME
 to, normally `WEBSITE_DOMAIN`.
+
+For tenant subdomains such as `cliente.example.com`, create a proxied wildcard
+DNS record (`*.example.com`) pointing to the production host and include the
+wildcard hostname in the Cloudflare Origin Certificate mounted by Nginx.
 
 The Nginx origin restores the visitor IP from `CF-Connecting-IP` when requests
 come from Cloudflare IP ranges. Keep the Cloudflare IP list current and restrict
@@ -125,8 +131,9 @@ possible:
 - https://www.cloudflare.com/ips/
 - https://developers.cloudflare.com/support/troubleshooting/restoring-visitor-ips/restoring-original-visitor-ips/
 
-Tenant wildcard/custom-domain TLS still needs the chosen ingress strategy
-completed. The current Nginx setup is intentionally explicit-domain only.
+Tenant wildcard subdomains are handled by `TENANT_WILDCARD_DOMAIN`; arbitrary
+customer-owned domains still use the HTTPS default server plus the configured
+custom-hostname DNS/TLS strategy.
 
 ### Smoke checks
 
