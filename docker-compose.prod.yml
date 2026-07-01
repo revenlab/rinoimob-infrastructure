@@ -65,7 +65,7 @@ services:
       seaweedfs-master:
         condition: service_healthy
       evolution-api:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:39000/actuator/health | grep -q '\"status\":\"UP\"'"]
       interval: 20s
