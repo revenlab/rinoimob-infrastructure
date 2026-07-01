@@ -221,6 +221,9 @@ services:
       AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "false"
       DATABASE_ENABLED: "true"
       DATABASE_PROVIDER: postgresql
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://redis:6379/0
+      CACHE_REDIS_PREFIX_KEY: evolution
       RABBITMQ_ENABLED: "true"
       RABBITMQ_EXCHANGE_NAME: evolution
       RABBITMQ_GLOBAL_ENABLED: "true"
@@ -235,6 +238,8 @@ services:
       - evolution_data:/evolution/instances
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
